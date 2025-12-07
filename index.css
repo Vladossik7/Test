@@ -1,0 +1,767 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  /* display: flex;
+  place-items: center; */
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.audio-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.record-button {
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 280px;
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+}
+
+.record-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+}
+
+.record-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.record-button.recording {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+  animation: pulse-recording 2s infinite;
+}
+
+.recording-status {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 25px;
+  background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(25, 135, 84, 0.1) 100%);
+  border-radius: 50px;
+  border: 2px solid rgba(40, 167, 69, 0.2);
+}
+
+.pulse-dot {
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  border-radius: 50%;
+  animation: pulse-dot 1.5s infinite;
+}
+
+.recording-status span {
+  color: #198754;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.current-note {
+  padding: 8px 16px;
+  background: white;
+  border-radius: 30px;
+  font-weight: 800;
+  color: #333;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 18px;
+  border: 2px solid #28a745;
+  min-width: 70px;
+  text-align: center;
+}
+
+.audio-results {
+  margin: 25px 0;
+  padding: 25px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.audio-results h3 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notes-list {
+  max-height: 250px;
+  overflow-y: auto;
+  margin-top: 15px;
+  padding-right: 10px;
+}
+
+.note-item {
+  padding: 14px 18px;
+  margin: 10px 0;
+  border-radius: 12px;
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+}
+
+.note-item.note {
+  background: linear-gradient(135deg, #e8f5e9 0%, #d4edda 100%);
+  border-left: 4px solid #28a745;
+  color: #155724;
+}
+
+.note-item.silence {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-left: 4px solid #6c757d;
+  color: #495057;
+}
+
+.recording-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 15px;
+}
+
+.stat-box {
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #28a745;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.clear-button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.clear-button:hover {
+  background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+  transform: translateY(-2px);
+}
+
+@keyframes pulse-recording {
+  0% { box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3); }
+  50% { box-shadow: 0 4px 25px rgba(40, 167, 69, 0.6); }
+  100% { box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3); }
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+  70% { transform: scale(1.2); opacity: 0.8; box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+  100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+
+
+
+/* === ПРОСТІ КНОПКИ === */
+
+.load-button {
+  padding: 14px 30px;
+  background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 260px;
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.load-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+}
+
+.load-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.load-button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.record-button {
+  padding: 14px 30px;
+  background: linear-gradient(to right, #ff758c 0%, #ff7eb3 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 260px;
+  box-shadow: 0 4px 15px rgba(255, 117, 140, 0.4);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.record-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 117, 140, 0.6);
+}
+
+.record-button.recording {
+  background: linear-gradient(to right, #42e695 0%, #3bb2b8 100%);
+  animation: pulse 1.5s infinite;
+  box-shadow: 0 4px 15px rgba(66, 230, 149, 0.4);
+}
+
+.record-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.record-button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 4px 15px rgba(66, 230, 149, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 25px rgba(66, 230, 149, 0.7);
+  }
+  100% {
+    box-shadow: 0 4px 15px rgba(66, 230, 149, 0.4);
+  }
+}
+
+/* Контейнер для кнопок */
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+/* Адаптивність */
+@media (max-width: 768px) {
+  .load-button,
+  .record-button {
+    min-width: 240px;
+    padding: 12px 25px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .load-button,
+  .record-button {
+    min-width: 200px;
+    padding: 10px 20px;
+    font-size: 14px;
+    width: 90%;
+    max-width: 280px;
+  }
+}
+
+
+
+
+
+
+
+
+/* === ФІОЛЕТОВІ КНОПКИ ПЕРЕКЛЮЧЕННЯ === */
+
+.view-switcher {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.view-switcher button {
+  padding: 14px 30px;
+  background: linear-gradient(to right, #8a2be2 0%, #9370db 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 160px;
+  box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.view-switcher button:hover {
+  background: linear-gradient(to right, #7b1fa2 0%, #8367d0 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+}
+
+.view-switcher button.active {
+  background: linear-gradient(to right, #ff69b4 0%, #ff1493 100%);
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+  animation: pulsePink 1.5s infinite;
+}
+
+.view-switcher button.active:hover {
+  background: linear-gradient(to right, #ff59a8 0%, #ff0a8a 100%);
+  box-shadow: 0 6px 20px rgba(255, 105, 180, 0.6);
+}
+
+@keyframes pulsePink {
+  0% {
+    box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 25px rgba(255, 105, 180, 0.7);
+  }
+  100% {
+    box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+  }
+}
+
+/* Адаптивність */
+@media (max-width: 768px) {
+  .view-switcher {
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    max-width: 340px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .view-switcher button {
+    min-width: 140px;
+    padding: 12px 25px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .view-switcher {
+    flex-direction: column;
+    gap: 8px;
+    width: 90%;
+    max-width: 280px;
+  }
+  
+  .view-switcher button {
+    width: 100%;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* === ОСНОВНІ СТИЛІ САЙТУ === */
+
+.App {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  font-family: 'Segoe UI', 'Roboto', -apple-system, sans-serif;
+  color: #ffffff;
+}
+
+/* === HEADER САЙТУ === */
+.App-header {
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Назва сайту */
+.site-title {
+  text-align: center;
+  margin-bottom: 40px;
+  color: #ffffff;
+}
+
+.site-title h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.site-title p {
+  font-size: 1.1rem;
+  color: #cccccc;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* === ОСНОВНИЙ КОНТЕНТ === */
+.controls {
+  background: #333333;
+  border-radius: 20px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  border: 1px solid #444444;
+}
+
+/* === ІНСТРУКЦІЇ === */
+.instructions {
+  background: #2a2a2a;
+  border-radius: 15px;
+  padding: 25px;
+  text-align: center;
+  margin-top: 30px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  border-left: 4px solid #667eea;
+  color: #cccccc;
+}
+
+.instructions p {
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* === ВІДОБРАЖЕННЯ МУЗИКИ === */
+.music-display {
+  background: #333333;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  min-height: 300px;
+  margin-top: 30px;
+  border: 1px solid #444444;
+}
+
+/* === РЕЗУЛЬТАТИ === */
+.results {
+  background: #2a2a2a;
+  border-radius: 15px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid #3a3a3a;
+}
+
+.results h3 {
+  color: #ffffff;
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+/* === ТАБУЛАТУРА === */
+.tablature-container {
+  background: #2a2a2a;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid #3a3a3a;
+}
+
+.tablature-container h3 {
+  color: #ffffff;
+}
+
+/* === КНОПКИ (оновлюємо для темного фону) === */
+.load-button,
+.record-button,
+.view-switcher button {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+}
+
+.view-switcher button {
+  background: linear-gradient(to right, #555555 0%, #777777 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #666666 !important;
+}
+
+.view-switcher button:hover {
+  background: linear-gradient(to right, #666666 0%, #888888 100%) !important;
+}
+
+.view-switcher button.active {
+  background: linear-gradient(to right, #667eea 0%, #764ba2 100%) !important;
+}
+
+/* === АУДІО РЕЗУЛЬТАТИ === */
+.audio-results {
+  background: #2a2a2a;
+  border-radius: 15px;
+  padding: 25px;
+  margin: 20px 0;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid #3a3a3a;
+}
+
+.audio-results h3 {
+  color: #ffffff;
+}
+
+.note-item.note {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border-left: 4px solid #3498db;
+  color: #ecf0f1;
+}
+
+.note-item.silence {
+  background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+  border-left: 4px solid #7f8c8d;
+  color: #bdc3c7;
+}
+
+.recording-stats {
+  background: #333333;
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid #444444;
+}
+
+.stat-box {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+}
+
+.clear-button {
+  background: linear-gradient(135deg, #555555 0%, #777777 100%);
+  color: white;
+  border: 1px solid #666666;
+}
+
+.clear-button:hover {
+  background: linear-gradient(135deg, #666666 0%, #888888 100%);
+}
+
+/* === ФУТЕР === */
+.footer {
+  text-align: center;
+  margin-top: 50px;
+  padding: 20px;
+  color: #888888;
+  font-size: 0.9rem;
+  border-top: 1px solid #444444;
+}
+
+.footer p {
+  margin: 5px 0;
+}
+
+/* === АДАПТИВНІСТЬ === */
+@media (max-width: 768px) {
+  .App-header {
+    padding: 20px 15px;
+  }
+  
+  .site-title h1 {
+    font-size: 2rem;
+  }
+  
+  .site-title p {
+    font-size: 1rem;
+    padding: 0 15px;
+  }
+  
+  .controls {
+    padding: 20px;
+  }
+  
+  .music-display {
+    padding: 20px;
+  }
+  
+  .instructions {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-title h1 {
+    font-size: 1.7rem;
+  }
+  
+  .controls {
+    padding: 15px;
+  }
+  
+  .music-display {
+    padding: 15px;
+  }
+  
+  .instructions {
+    padding: 15px;
+  }
+}
+
+/* === СВІТЛА ТЕМА (якщо хтось використовує) === */
+@media (prefers-color-scheme: light) {
+  .App {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+    color: #333333;
+  }
+  
+  .site-title h1 {
+    color: #333333;
+    text-shadow: none;
+  }
+  
+  .site-title p {
+    color: #666666;
+  }
+  
+  .controls,
+  .music-display,
+  .instructions,
+  .results,
+  .tablature-container,
+  .audio-results {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    color: #333333;
+  }
+  
+  .results h3,
+  .audio-results h3 {
+    color: #333333;
+  }
+  
+  .note-item.note {
+    background: linear-gradient(135deg, #e8f5e9 0%, #d4edda 100%);
+    color: #155724;
+  }
+  
+  .note-item.silence {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #495057;
+  }
+  
+  .footer {
+    color: #666666;
+    border-top-color: #e0e0e0;
+  }
+}
