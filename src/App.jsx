@@ -1,6 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'  // Додав useEffect
+import * as Tone from 'tone'
 
-import { frequencyToNote } from './utils/general'
+
+import { frequencyToNote, analyzeAudioWithTone } from './utils/general'
 import { simpleMidiParse } from './utils/simpleMidiParser'
 import { generateTablature } from './utils/generateTablature'
 
@@ -25,6 +27,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const fileInputRef = useRef(null)
 
+  const [isAnalyzingAudio, setIsAnalyzingAudio] = useState(false)
+  const [audioProgress, setAudioProgress] = useState(0)
+  const [currentAudioFile, setCurrentAudioFile] = useState(null)
+  const audioPlayerRef = useRef(null)
+
   const audioContextRef = useRef(null)
   const analyserRef = useRef(null)
   const microphoneRef = useRef(null)
@@ -40,42 +47,114 @@ function App() {
     const file = event.target.files[0]
     if (!file) return
 
-    setIsLoading(true)
+    const fileExtension = file.name.split('.').pop().toLowerCase()
+    
+    // Обробка MIDI файлів
+    if (fileExtension === 'mid' || fileExtension === 'midi') {
+      setIsLoading(true)
 
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      try {
-        const arrayBuffer = e.target.result
-        console.log('MIDI файл завантажено:', file.name)
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target.result
+          console.log('MIDI файл завантажено:', file.name)
 
-        const parsedNotes = simpleMidiParse(arrayBuffer)
-        console.log('Розпарсені ноти:', parsedNotes)
+          const parsedNotes = simpleMidiParse(arrayBuffer)
+          console.log('Розпарсені ноти:', parsedNotes)
 
-        setNotes(parsedNotes)
+          setNotes(parsedNotes)
 
-        // Генеруємо табулатуру
-        const generatedTab = generateTablature(parsedNotes)
-        setTablature(generatedTab)
+          // Генеруємо табулатуру
+          const generatedTab = generateTablature(parsedNotes)
+          setTablature(generatedTab)
 
-        // Рендеримо нотний стан
-        //   setTimeout(() => {
-        // renderSheetMusic(parsedNotes);
-        // }, 100);
-      } catch (error) {
-        console.error('Помилка обробки MIDI:', error)
-        alert('Помилка при обробці MIDI файлу: ' + error.message)
-      } finally {
-        setIsLoading(false)
+          // Очищаємо поточне аудіо
+          setCurrentAudioFile(null)
+        } catch (error) {
+          console.error('Помилка обробки MIDI:', error)
+          alert('Помилка при обробці MIDI файлу: ' + error.message)
+        } finally {
+          setIsLoading(false)
+        }
       }
-    }
 
-    reader.onerror = (e) => {
-      console.error('Помилка читання файлу:', e)
-      setIsLoading(false)
-      alert('Помилка читання файлу')
-    }
+      reader.onerror = (e) => {
+        console.error('Помилка читання файлу:', e)
+        setIsLoading(false)
+        alert('Помилка читання файлу')
+      }
 
-    reader.readAsArrayBuffer(file)
+      reader.readAsArrayBuffer(file)
+    }
+    // Обробка аудіо файлів
+    else if (fileExtension === 'mp3' || fileExtension === 'wav') {
+      await handleAudioFile(file)
+    }
+    else {
+      alert('Непідтримуваний формат файлу. Будь ласка, оберіть MIDI, MP3 або WAV файл.')
+    }
+  }
+
+  const handleAudioFile = async (file) => {
+  setIsAnalyzingAudio(true)
+  setAudioProgress(0)
+  
+  try {
+    console.log('Обробка аудіо файлу з Tone.js:', file.name)
+    
+    // Створюємо URL для відтворення
+    const audioUrl = URL.createObjectURL(file)
+    setCurrentAudioFile(audioUrl)
+    
+    setAudioProgress(20)
+    
+    // Використовуємо Tone.js для аналізу аудіо
+    const detectedNotes = await analyzeAudioWithTone(file, setAudioProgress)
+    
+    setAudioProgress(80)
+    
+    setNotes(detectedNotes)
+    const generatedTab = generateTablature(detectedNotes)
+    setTablature(generatedTab)
+    
+    console.log('Виявлені ноти з аудіо:', detectedNotes)
+    
+    setAudioProgress(100)
+    
+  } catch (error) {
+    console.error('Помилка обробки аудіо з Tone.js:', error)
+  
+  } finally {
+    setIsAnalyzingAudio(false)
+  }
+}
+
+  // Допоміжна функція для симуляції аналізу аудіо (тимчасово)
+  const simulateAudioAnalysis = async (file) => {
+    return new Promise((resolve) => {
+      // Імітація процесу аналізу з прогресом
+      const interval = setInterval(() => {
+        setAudioProgress(prev => {
+          const newProgress = prev + 10
+          if (newProgress >= 100) {
+            clearInterval(interval)
+            
+            // Створюємо тестові ноти (на практиці тут буде реальний аналіз)
+            const testNotes = [
+              { note: 'C', octave: 4, number: 60, time: 0, duration: 0.5, frequency: 261.63 },
+              { note: 'E', octave: 4, number: 64, time: 1, duration: 0.5, frequency: 329.63 },
+              { note: 'G', octave: 4, number: 67, time: 2, duration: 0.5, frequency: 392.00 },
+              { note: 'C', octave: 5, number: 72, time: 3, duration: 1.0, frequency: 523.25 },
+              { note: 'E', octave: 5, number: 76, time: 4, duration: 0.5, frequency: 659.25 },
+              { note: 'G', octave: 5, number: 79, time: 5, duration: 0.5, frequency: 783.99 },
+            ]
+            
+            resolve(testNotes)
+          }
+          return newProgress
+        })
+      }, 200)
+    })
   }
 
   const handleViewChange = (view) => {
@@ -244,7 +323,6 @@ function App() {
         setNotes(vexFlowNotes)
         const generatedTab = generateTablature(vexFlowNotes)
         setTablature(generatedTab)
-        // setTimeout(() => renderSheetMusic(vexFlowNotes), 100);
       }
     }
 
@@ -275,6 +353,27 @@ function App() {
     setRecordingStats({ totalNotes: 0, totalDuration: 0, avgFrequency: 0 })
   }
 
+  const playAudio = () => {
+    if (audioPlayerRef.current && currentAudioFile) {
+      audioPlayerRef.current.play()
+    }
+  }
+
+  const pauseAudio = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause()
+    }
+  }
+
+  // Очистка аудіо URL при розмонтуванні
+  useEffect(() => {
+    return () => {
+      if (currentAudioFile) {
+        URL.revokeObjectURL(currentAudioFile)
+      }
+    }
+  }, [currentAudioFile])
+
   const isSheetViewActive = activeView === 'sheet'
   const isTabsViewActive = activeView === 'tab'
 
@@ -286,21 +385,46 @@ function App() {
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept=".mid,.midi"
+            accept=".mid,.midi,.mp3,.wav"
             style={{ display: 'none' }}
           />
-          <button onClick={handleLoadMidi} disabled={isLoading} className="load-button">
-            {isLoading ? 'Завантаження...' : 'Завантажити MIDI файл'}
+          <button onClick={handleLoadMidi} disabled={isLoading || isAnalyzingAudio} className="load-button">
+            {isLoading ? 'Завантаження MIDI...' : 
+             isAnalyzingAudio ? `Аналіз аудіо... ${audioProgress}%` : 
+             'Завантажити файл (MIDI/MP3/WAV)'}
           </button>
 
           <div className="audio-controls">
             <button
               onClick={isRecording ? stopRecording : startRecording}
               className={`record-button ${isRecording ? 'recording' : ''}`}
-              disabled={isLoading}
+              disabled={isLoading || isAnalyzingAudio}
             >
               {isRecording ? 'Зупинити запис' : 'Записати з мікрофона'}
             </button>
+
+            {currentAudioFile && (
+              <div className="audio-player-controls">
+                <button onClick={playAudio} className="play-button">
+                  ▶ Відтворити аудіо
+                </button>
+                <button onClick={pauseAudio} className="pause-button">
+                  ⏸ Пауза
+                </button>
+              </div>
+            )}
+
+            {isAnalyzingAudio && (
+              <div className="analyzing-progress">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${audioProgress}%` }}
+                  ></div>
+                </div>
+                <p>Аналіз аудіофайлу... {audioProgress}%</p>
+              </div>
+            )}
 
             {isRecording && (
               <div className="recording-status">
@@ -367,6 +491,13 @@ function App() {
           {isSheetViewActive && <SheetMusic notes={notes} />}
           {isTabsViewActive && <TablatureView tablature={tablature} />}
         </div>
+        
+        <audio 
+          ref={audioPlayerRef} 
+          src={currentAudioFile || ''}
+          style={{ display: 'none' }} 
+          controls 
+        />
       </header>
     </div>
   )
