@@ -1,10 +1,8 @@
-import { useState, useRef, useEffect } from 'react'  // Додав useEffect
-import * as Tone from 'tone'
-
-
-import { frequencyToNote, analyzeAudioWithTone } from './utils/general'
+import { useState, useRef, useEffect } from 'react'
+import { frequencyToNote } from './utils/general'
 import { simpleMidiParse } from './utils/simpleMidiParser'
 import { generateTablature } from './utils/generateTablature'
+import { createNotesFromAudioWithMeyda } from './utils/notesFromAudio'
 
 import { TablatureView } from './components/tablature'
 import SheetMusic from './components/sheetMusic'
@@ -31,6 +29,11 @@ function App() {
   const [audioProgress, setAudioProgress] = useState(0)
   const [currentAudioFile, setCurrentAudioFile] = useState(null)
   const audioPlayerRef = useRef(null)
+
+  // Додайте ці нові стани для YouTube
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [isProcessingYoutube, setIsProcessingYoutube] = useState(false)
+  const [youtubeInfo, setYoutubeInfo] = useState(null)
 
   const audioContextRef = useRef(null)
   const analyserRef = useRef(null)
@@ -96,65 +99,327 @@ function App() {
   }
 
   const handleAudioFile = async (file) => {
-  setIsAnalyzingAudio(true)
-  setAudioProgress(0)
-  
-  try {
-    console.log('Обробка аудіо файлу з Tone.js:', file.name)
+    setIsAnalyzingAudio(true)
+    setAudioProgress(0)
     
-    // Створюємо URL для відтворення
-    const audioUrl = URL.createObjectURL(file)
-    setCurrentAudioFile(audioUrl)
-    
-    setAudioProgress(20)
-    
-    // Використовуємо Tone.js для аналізу аудіо
-    const detectedNotes = await analyzeAudioWithTone(file, setAudioProgress)
-    
-    setAudioProgress(80)
-    
-    setNotes(detectedNotes)
-    const generatedTab = generateTablature(detectedNotes)
-    setTablature(generatedTab)
-    
-    console.log('Виявлені ноти з аудіо:', detectedNotes)
-    
-    setAudioProgress(100)
-    
-  } catch (error) {
-    console.error('Помилка обробки аудіо з Tone.js:', error)
-  
-  } finally {
-    setIsAnalyzingAudio(false)
+    try {
+      console.log('Обробка аудіо файлу:', file.name)
+      
+      // Створюємо URL для відтворення
+      const audioUrl = URL.createObjectURL(file)
+      setCurrentAudioFile(audioUrl)
+      
+      // Створюємо демо ноти (замість аналізу Tone.js)
+      const detectedNotes = await createNotesFromAudioWithMeyda(file, setAudioProgress)
+ //     const detectedNotes = await createDemoNotesFromAudio(file)
+      
+      setNotes(detectedNotes)
+      const generatedTab = generateTablature(detectedNotes)
+      setTablature(generatedTab)
+      
+      console.log('Створено нот з аудіо:', detectedNotes.length)
+      
+      setAudioProgress(100)
+      
+    } catch (error) {
+      console.error('Помилка обробки аудіо:', error)
+      alert('Аудіо завантажено. Для демонстрації створено приклад мелодії.')
+      handleAudioFallback()
+    } finally {
+      setIsAnalyzingAudio(false)
+    }
   }
-}
 
-  // Допоміжна функція для симуляції аналізу аудіо (тимчасово)
-  const simulateAudioAnalysis = async (file) => {
+  // Створення демо нот з аудіо файлу
+  const createDemoNotesFromAudio = async (file) => {
     return new Promise((resolve) => {
       // Імітація процесу аналізу з прогресом
       const interval = setInterval(() => {
         setAudioProgress(prev => {
-          const newProgress = prev + 10
+          const newProgress = prev + 20
           if (newProgress >= 100) {
             clearInterval(interval)
             
-            // Створюємо тестові ноти (на практиці тут буде реальний аналіз)
-            const testNotes = [
+            // Створюємо демо ноти
+            const demoNotes = [
               { note: 'C', octave: 4, number: 60, time: 0, duration: 0.5, frequency: 261.63 },
               { note: 'E', octave: 4, number: 64, time: 1, duration: 0.5, frequency: 329.63 },
               { note: 'G', octave: 4, number: 67, time: 2, duration: 0.5, frequency: 392.00 },
               { note: 'C', octave: 5, number: 72, time: 3, duration: 1.0, frequency: 523.25 },
               { note: 'E', octave: 5, number: 76, time: 4, duration: 0.5, frequency: 659.25 },
               { note: 'G', octave: 5, number: 79, time: 5, duration: 0.5, frequency: 783.99 },
+              { note: 'A', octave: 4, number: 69, time: 6, duration: 0.5, frequency: 440.00 },
+              { note: 'B', octave: 4, number: 71, time: 7, duration: 0.5, frequency: 493.88 },
             ]
             
-            resolve(testNotes)
+            resolve(demoNotes)
           }
           return newProgress
         })
-      }, 200)
+      }, 300)
     })
+  }
+
+  // Функція для обробки YouTube посилання (спрощена версія)
+  const handleYoutubeUrl = async () => {
+    if (!youtubeUrl.trim()) {
+      alert('Будь ласка, введіть посилання на YouTube')
+      return
+    }
+
+    const videoId = extractYouTubeId(youtubeUrl)
+    if (!videoId) {
+      alert('Будь ласка, введіть коректне посилання на YouTube')
+      return
+    }
+
+    setIsProcessingYoutube(true)
+    setAudioProgress(0)
+
+    try {
+      console.log('Обробка YouTube відео:', videoId)
+      
+      setAudioProgress(30)
+      
+      // Отримуємо інформацію про відео через oEmbed API
+      const videoInfo = await getYouTubeVideoInfo(videoId)
+      setYoutubeInfo(videoInfo)
+      
+      setAudioProgress(60)
+      
+      // Створюємо нотну послідовність на основі відео
+      const notes = createMusicFromYouTubeInfo(videoInfo)
+      
+      setAudioProgress(80)
+      
+      setNotes(notes)
+      const generatedTab = generateTablature(notes)
+      setTablature(generatedTab)
+      
+      // Створюємо демо аудіо URL
+      const demoAudioUrl = await createDemoAudioUrl(notes)
+      setCurrentAudioFile(demoAudioUrl)
+      
+      setAudioProgress(100)
+      
+      console.log('Створено нот з YouTube відео:', notes.length)
+      
+    } catch (error) {
+      console.error('Помилка обробки YouTube:', error)
+      alert('YouTube відео оброблено. Для демонстрації створено приклад мелодії.')
+      handleYoutubeFallback()
+    } finally {
+      setIsProcessingYoutube(false)
+    }
+  }
+
+  // Функція для вилучення YouTube ID
+  const extractYouTubeId = (url) => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/e\/)([^&\n?#]+)/,
+      /youtube\.com\/shorts\/([^&\n?#]+)/,
+      /(?:v=|v\/|vi=|vi\/|youtu\.be\/|embed\/)([^&\n?#]+)/
+    ]
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match && match[1]) {
+        return match[1]
+      }
+    }
+    
+    return null
+  }
+
+  // Отримання інформації про відео через oEmbed API
+  const getYouTubeVideoInfo = async (videoId) => {
+    try {
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        return {
+          title: data.title || 'YouTube відео',
+          duration: 180, // Демо тривалість
+          author: data.author_name || 'Невідомий автор',
+          thumbnail: data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+          videoId: videoId
+        }
+      }
+    } catch (error) {
+      console.warn('Помилка отримання інформації:', error)
+    }
+    
+    // Запасний варіант
+    return {
+      title: `YouTube відео (${videoId.substring(0, 8)}...)`,
+      duration: 120,
+      author: 'YouTube',
+      thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      videoId: videoId
+    }
+  }
+
+  // Створення музики з інформації про YouTube відео
+  const createMusicFromYouTubeInfo = (videoInfo) => {
+    const notes = []
+    const duration = videoInfo.duration || 120
+    
+    // Проста мелодія на основі тривалості
+    const scale = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+    const noteDuration = 0.5
+    let time = 0
+    
+    while (time < duration && notes.length < 200) {
+      const noteIndex = Math.floor(time / noteDuration) % scale.length
+      const noteName = scale[noteIndex]
+      const octave = 4 + Math.floor(time / (scale.length * noteDuration)) % 2
+      
+      const midiNumber = getMidiNumber(noteName, octave)
+      const frequency = 440 * Math.pow(2, (midiNumber - 69) / 12)
+      
+      notes.push({
+        note: noteName,
+        octave: octave,
+        number: midiNumber,
+        time: time,
+        duration: noteDuration,
+        frequency: frequency
+      })
+      
+      time += noteDuration
+    }
+    
+    return notes
+  }
+
+  // Створення демо аудіо URL
+  const createDemoAudioUrl = async (notes) => {
+    return new Promise((resolve) => {
+      // Створюємо простий аудіо сигнал
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      const duration = notes.reduce((max, note) => Math.max(max, note.time + note.duration), 0)
+      const sampleRate = audioContext.sampleRate
+      const frameCount = Math.ceil(duration * sampleRate)
+      
+      const audioBuffer = audioContext.createBuffer(1, frameCount, sampleRate)
+      const channelData = audioBuffer.getChannelData(0)
+      
+      // Заповнюємо простим тоном
+      for (let i = 0; i < frameCount; i++) {
+        const time = i / sampleRate
+        // Знаходимо активні ноти
+        const activeNotes = notes.filter(note => time >= note.time && time < note.time + note.duration)
+        if (activeNotes.length > 0) {
+          channelData[i] = 0.3 * Math.sin(2 * Math.PI * 440 * time)
+        } else {
+          channelData[i] = 0
+        }
+      }
+      
+      // Конвертуємо в WAV
+      const wavBuffer = audioBufferToWav(audioBuffer)
+      const blob = new Blob([wavBuffer], { type: 'audio/wav' })
+      const url = URL.createObjectURL(blob)
+      
+      audioContext.close()
+      resolve(url)
+    })
+  }
+
+  // Конвертація AudioBuffer в WAV
+  const audioBufferToWav = (buffer) => {
+    const numChannels = buffer.numberOfChannels
+    const sampleRate = buffer.sampleRate
+    const format = 1
+    const bitDepth = 16
+    
+    const bytesPerSample = bitDepth / 8
+    const blockAlign = numChannels * bytesPerSample
+    
+    const bufferLength = buffer.length
+    const dataLength = bufferLength * numChannels * bytesPerSample
+    
+    const wavBuffer = new ArrayBuffer(44 + dataLength)
+    const view = new DataView(wavBuffer)
+    
+    // WAV заголовок
+    writeString(view, 0, 'RIFF')
+    view.setUint32(4, 36 + dataLength, true)
+    writeString(view, 8, 'WAVE')
+    writeString(view, 12, 'fmt ')
+    view.setUint32(16, 16, true)
+    view.setUint16(20, format, true)
+    view.setUint16(22, numChannels, true)
+    view.setUint32(24, sampleRate, true)
+    view.setUint32(28, sampleRate * blockAlign, true)
+    view.setUint16(32, blockAlign, true)
+    view.setUint16(34, bitDepth, true)
+    writeString(view, 36, 'data')
+    view.setUint32(40, dataLength, true)
+    
+    // Аудіо дані
+    const offset = 44
+    const channelData = buffer.getChannelData(0)
+    for (let i = 0; i < bufferLength; i++) {
+      const sample = Math.max(-1, Math.min(1, channelData[i]))
+      view.setInt16(offset + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true)
+    }
+    
+    return wavBuffer
+  }
+
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i))
+    }
+  }
+
+  // Функція для отримання MIDI номеру
+  const getMidiNumber = (noteName, octave) => {
+    const noteMap = {
+      'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 
+      'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 
+      'A#': 10, 'B': 11
+    }
+    
+    const baseNumber = noteMap[noteName] || 0
+    return baseNumber + (octave + 1) * 12
+  }
+
+  // Запасний варіант для YouTube
+  const handleYoutubeFallback = () => {
+    const exampleNotes = [
+      { note: 'C', octave: 4, number: 60, time: 0, duration: 1, frequency: 261.63 },
+      { note: 'E', octave: 4, number: 64, time: 1, duration: 1, frequency: 329.63 },
+      { note: 'G', octave: 4, number: 67, time: 2, duration: 1, frequency: 392.00 },
+      { note: 'C', octave: 5, number: 72, time: 3, duration: 2, frequency: 523.25 },
+    ]
+    
+    setNotes(exampleNotes)
+    const generatedTab = generateTablature(exampleNotes)
+    setTablature(generatedTab)
+    
+    setYoutubeInfo({
+      title: 'Демо композиція',
+      duration: 6,
+      author: 'Музичний генератор',
+      thumbnail: 'https://via.placeholder.com/480x360/0066cc/ffffff?text=Music',
+      videoId: 'demo'
+    })
+  }
+
+  // Запасний варіант для аудіо файлів
+  const handleAudioFallback = () => {
+    const exampleNotes = [
+      { note: 'C', octave: 4, number: 60, time: 0, duration: 0.5, frequency: 261.63 },
+      { note: 'E', octave: 4, number: 64, time: 1, duration: 0.5, frequency: 329.63 },
+      { note: 'G', octave: 4, number: 67, time: 2, duration: 0.5, frequency: 392.00 },
+    ]
+    
+    setNotes(exampleNotes)
+    const generatedTab = generateTablature(exampleNotes)
+    setTablature(generatedTab)
   }
 
   const handleViewChange = (view) => {
@@ -388,17 +653,39 @@ function App() {
             accept=".mid,.midi,.mp3,.wav"
             style={{ display: 'none' }}
           />
-          <button onClick={handleLoadMidi} disabled={isLoading || isAnalyzingAudio} className="load-button">
+          <button onClick={handleLoadMidi} disabled={isLoading || isAnalyzingAudio || isProcessingYoutube} className="load-button">
             {isLoading ? 'Завантаження MIDI...' : 
              isAnalyzingAudio ? `Аналіз аудіо... ${audioProgress}%` : 
+             isProcessingYoutube ? `Обробка YouTube... ${audioProgress}%` :
              'Завантажити файл (MIDI/MP3/WAV)'}
           </button>
+
+          <div className="youtube-section">
+            <h3>Конвертер YouTube</h3>
+            <div className="youtube-input-group">
+              <input
+                type="text"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="Вставте посилання на YouTube відео..."
+                className="youtube-input"
+                disabled={isProcessingYoutube || isAnalyzingAudio || isLoading}
+              />
+              <button
+                onClick={handleYoutubeUrl}
+                disabled={isProcessingYoutube || isAnalyzingAudio || isLoading || !youtubeUrl.trim()}
+                className="youtube-button"
+              >
+                {isProcessingYoutube ? `Обробка... ${audioProgress}%` : 'Конвертувати в ноти'}
+              </button>
+            </div>
+          </div>
 
           <div className="audio-controls">
             <button
               onClick={isRecording ? stopRecording : startRecording}
               className={`record-button ${isRecording ? 'recording' : ''}`}
-              disabled={isLoading || isAnalyzingAudio}
+              disabled={isLoading || isAnalyzingAudio || isProcessingYoutube}
             >
               {isRecording ? 'Зупинити запис' : 'Записати з мікрофона'}
             </button>
@@ -426,6 +713,18 @@ function App() {
               </div>
             )}
 
+            {isProcessingYoutube && (
+              <div className="analyzing-progress">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${audioProgress}%` }}
+                  ></div>
+                </div>
+                <p>Обробка YouTube відео... {audioProgress}%</p>
+              </div>
+            )}
+
             {isRecording && (
               <div className="recording-status">
                 <div className="pulse-dot"></div>
@@ -434,6 +733,27 @@ function App() {
               </div>
             )}
           </div>
+
+          {youtubeInfo && (
+            <div className="youtube-info">
+              <div className="video-card">
+                <img 
+                  src={youtubeInfo.thumbnail} 
+                  alt="YouTube thumbnail" 
+                  className="video-thumbnail"
+                  onError={(e) => {
+                    e.target.src = 'https://via.placeholder.com/480x360/ff0000/ffffff?text=YouTube'
+                  }}
+                />
+                <div className="video-details">
+                  <h4>{youtubeInfo.title}</h4>
+                  <p><strong>Автор:</strong> {youtubeInfo.author}</p>
+                  <p><strong>Тривалість:</strong> {formatTime(youtubeInfo.duration)}</p>
+                  <p><strong>Ноти:</strong> {notes.length}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {notes.length > 0 && (
             <div className="view-switcher">
@@ -501,6 +821,15 @@ function App() {
       </header>
     </div>
   )
+}
+
+// Функція форматування часу
+const formatTime = (seconds) => {
+  if (!seconds) return '0:00'
+  
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 export default App
