@@ -6,6 +6,7 @@ const SheetMusic = ({ notes }) => {
 
   useEffect(() => {
     if (notes.length > 0) {
+      console.log('Отримані ноти для нотного стану:', notes)
       renderSheetMusic(notes)
     }
   }, [notes])
