@@ -6,6 +6,46 @@ const A4 = 440
 
 export const getNoteName = (noteNumber) => noteNames[noteNumber % 12]
 
+export const detectFrequency = (toneAnalyser) => {
+  if (!toneAnalyser) return null
+
+  const buffer = toneAnalyser.getValue()
+  const sampleRate = Tone.context.sampleRate
+
+  let rms = 0
+  for (let i = 0; i < buffer.length; i++) {
+    rms += buffer[i] * buffer[i]
+  }
+  rms = Math.sqrt(rms / buffer.length)
+
+  if (rms < 0.005) return null
+
+  let bestOffset = -1
+  let lastCorrelation = 1
+  let bestCorrelation = 0
+
+  for (let offset = 40; offset < 600; offset++) {
+    let correlation = 0
+    for (let i = 0; i < buffer.length / 2; i++) {
+      correlation += Math.abs(buffer[i] - buffer[i + offset])
+    }
+    correlation = 1 - correlation / (buffer.length / 2)
+
+    if (correlation > lastCorrelation && correlation > bestCorrelation) {
+      bestCorrelation = correlation
+      bestOffset = offset
+    }
+    lastCorrelation = correlation
+  }
+
+  if (bestCorrelation > 0.85 && bestOffset !== -1) {
+    const frequency = sampleRate / bestOffset
+    return frequency > 70 && frequency < 1200 ? frequency : null
+  }
+
+  return null
+}
+
 export const frequencyToNote = (frequency, startTime = 0, defaultDuration = 0.5) => {
   if (!frequency || frequency <= 0) return null
 
@@ -37,54 +77,85 @@ export const frequencyToNote = (frequency, startTime = 0, defaultDuration = 0.5)
     return null
   }
 }
+export const getTabPosition = (midi) => {
+  // 1. Опускаємо на октаву, якщо нота занадто висока для "першої позиції"
+  // MIDI 75 (D#5) стане 63 (Eb4), що ідеально лягає на 2-гу або 3-тю струну.
+  const correctedMidi = midi > 70 ? midi - 12 : midi
 
-// export const frequencyToNote = (frequency) => {
-//   if (!frequency || frequency <= 0) return null
+  // 2. MIDI відкритих струн: E4(64), B3(59), G3(55), D3(50), A2(45), E2(40)
+  const tuning = [64, 59, 55, 50, 45, 40]
 
-//   // Використовуємо Tone.Frequency для обчислень
-//   const freqObj = Tone.Frequency(frequency, 'hz')
+  // 3. Шукаємо струну, де лад буде від 0 до 12
+  for (let i = 0; i < tuning.length; i++) {
+    const fret = correctedMidi - tuning[i]
+    if (fret >= 0 && fret <= 12) {
+      return { str: i + 1, fret: fret }
+    }
+  }
 
-//   // Отримуємо назву ноти з октавою (напр. "C4", "G#2")
-//   const fullName = freqObj.toNote()
+  // 4. Якщо нота все ще занадто висока (наприклад, соло),
+  // дозволяємо вищі лади, але тільки на 1-й струні
+  if (correctedMidi > 76) {
+    return { str: 1, fret: correctedMidi - 64 }
+  }
 
-//   // Отримуємо MIDI номер (напр. 60, 69)
-//   const midiNumber = freqObj.toMidi()
+  // 5. Крайній випадок (дуже низька нота) - 6-та струна
+  return { str: 6, fret: Math.max(0, correctedMidi - 40) }
+}
 
-//   // Перевірка на адекватність діапазону (Piano range: A0=21, C8=108)
-//   // Для гітари це зазвичай 40 - 88+, але залишимо ширший для універсальності
-//   if (midiNumber < 12 || midiNumber > 127) return null
-
-//   // Визначаємо октаву та назву окремо
-//   // В Tone.js назва ноти йде першою, остання цифра — октава
-//   const octave = parseInt(fullName.slice(-1))
-//   const noteNameOnly = fullName.slice(0, -1)
-
-//   return {
-//     frequency: Math.round(frequency * 10) / 10,
-//     note: noteNameOnly,
-//     octave: octave,
-//     midiNumber: midiNumber,
-//     fullName: fullName, // Tone.js повертає коректний формат "C#4"
-//   }
-// }
-
-/* export const frequencyToNote = (frequency) => {
-  if (!frequency) return null
-
-  const halfStepsFromA4 = Math.round(12 * Math.log2(frequency / A4))
-  const midiNumber = 69 + halfStepsFromA4
-
-  if (midiNumber < 21 || midiNumber > 108) return null
-
-  const noteIndex = (midiNumber + 9) % 12
-  const octave = Math.floor((midiNumber - 12) / 12)
-
+export const midiToNoteName = (midi) => {
+  const notesArray = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+  const octave = Math.floor(midi / 12) - 1
+  const noteIndex = midi % 12
   return {
-    frequency: Math.round(frequency * 10) / 10,
-    note: noteNames[noteIndex],
+    name: notesArray[noteIndex],
     octave: octave,
-    midiNumber: midiNumber,
-    fullName: `${noteNames[noteIndex]}${octave}`,
   }
 }
-*/
+
+export const getVexDuration = (duration) => {
+  // Коригуємо пороги (можливо, варто помножити duration на 2, якщо дані занадто дрібні)
+  const d = duration * 2 || 0
+
+  if (d > 0.8) return 'h' // Половина
+  if (d > 0.5) return 'q' // Чверть
+  if (d > 0.3) return '8' // Вісімка
+  return '8' // Мінімально допустима - вісімка (замість 16-ї)
+}
+
+const getDurationValue = (dur) => {
+  const values = {
+    h: 0.5, // Половина
+    q: 0.25, // Чверть
+    8: 0.125, // Вісімка
+    16: 0.0625, // Шістнадцята
+  }
+  return values[dur] || 0.25
+}
+
+export const groupNotesIntoMeasures = (notes, numerator, denominator) => {
+  const measureLimit = numerator / denominator
+  const measures = []
+  let currentMeasure = []
+  let currentSum = 0
+
+  notes.forEach((n) => {
+    const dur = getVexDuration(n.duration)
+    const val = getDurationValue(dur)
+
+    // Якщо додання ноти перевищить ліміт такту (1.0), закриваємо поточний такт
+    if (currentSum + val > measureLimit + 0.01) {
+      measures.push(currentMeasure)
+      currentMeasure = []
+      currentSum = 0
+    }
+
+    currentMeasure.push(n)
+    currentSum += val
+  })
+
+  if (currentMeasure.length > 0) {
+    measures.push(currentMeasure)
+  }
+  return measures
+}

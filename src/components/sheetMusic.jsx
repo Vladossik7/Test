@@ -1,100 +1,158 @@
-import { useRef, useEffect } from 'react'
-import { Renderer, Stave, StaveNote, Accidental, Formatter, Voice } from 'vexflow'
+import { useRef, useEffect, useState } from 'react'
+import {
+  Renderer,
+  Stave,
+  StaveNote,
+  Voice,
+  Formatter,
+  Accidental,
+  TabStave,
+  TabNote,
+  StaveConnector,
+  Beam,
+} from 'vexflow'
 
-const SheetMusic = ({ notes }) => {
+import {
+  getTabPosition,
+  midiToNoteName,
+  getVexDuration,
+  groupNotesIntoMeasures,
+} from '../utils/general'
+import { exportToPDF, exportToPNG } from '../utils/exporting'
+
+const SheetMusic = ({ notes, timeSignature, title }) => {
+  const [showNotes, setShowNotes] = useState(false)
   const scoreDivRef = useRef(null)
-
+  const { numerator, denominator } = timeSignature
+  console.log('-=-==-=- ', title)
   useEffect(() => {
-    if (notes.length > 0) {
-      console.log('Отримані ноти для нотного стану:', notes)
+    if (notes && notes.length > 0) {
       renderSheetMusic(notes)
+      setShowNotes(true)
     }
   }, [notes])
 
-  const renderSheetMusic = (notes) => {
-    console.log('Рендеримо ноти:', notes)
-    if (!scoreDivRef.current || notes.length === 0) return
-
+  const renderSheetMusic = (musicNotes) => {
+    if (!scoreDivRef.current || musicNotes.length === 0) return
     scoreDivRef.current.innerHTML = ''
 
     try {
-      // Динамічно розраховуємо висоту залежно від кількості нот
-      const baseHeight = 200
-      const additionalHeight = Math.ceil(notes.length / 8) * 80
-      const totalHeight = baseHeight + additionalHeight
+      const totalWidth = 800
+      const measuresPerRow = 2
 
-      const renderer = new Renderer(scoreDivRef.current, Renderer.Backends.SVG)
-      renderer.resize(800, totalHeight)
+      // 1. Отримуємо масив тактів
+      const measures = groupNotesIntoMeasures(musicNotes, numerator, denominator)
+
+      if (measures.length === 0) return
+
+      const rowsCount = Math.ceil(measures.length / measuresPerRow)
+      const totalHeight = Math.max(280, rowsCount * 280)
+
+      const renderer = new Renderer(scoreDivRef.current, Renderer.Backends.CANVAS)
+      // const renderer = new Renderer(scoreDivRef.current, Renderer.Backends.SVG)
+      renderer.resize(totalWidth, totalHeight)
       const context = renderer.getContext()
+      // context.setFont('Bravura')
 
-      // Створюємо кілька стайвів залежно від кількості нот
-      const notesPerStave = 8
-      const staveCount = Math.ceil(notes.length / notesPerStave)
+      const measureWidth = (totalWidth - 80) / measuresPerRow
 
-      let currentNoteIndex = 0
+      // 2. Ітеруємося по масиву тактів (measures)
+      for (let m = 0; m < measures.length; m++) {
+        const rowIndex = Math.floor(m / measuresPerRow)
+        const colIndex = m % measuresPerRow
 
-      for (let staveIndex = 0; staveIndex < staveCount; staveIndex++) {
-        const staveNotes = notes.slice(currentNoteIndex, currentNoteIndex + notesPerStave)
-        currentNoteIndex += notesPerStave
+        const x = 50 + colIndex * measureWidth
+        const y = 50 + rowIndex * 250
 
-        const staveY = 40 + staveIndex * 120
+        const stave = new Stave(x, y, measureWidth)
+        const tabStave = new TabStave(x, y + 80, measureWidth)
 
-        const stave = new Stave(10, staveY, 780)
-        stave.addClef('treble').addTimeSignature('4/4')
+        if (colIndex === 0) {
+          stave.addClef('treble').addTimeSignature(`${numerator}/${denominator}`)
+          tabStave.addTabGlyph().addTimeSignature(`${numerator}/${denominator}`)
+
+          new StaveConnector(stave, tabStave)
+            .setType(StaveConnector.type.BRACKET)
+            .setContext(context)
+            .draw()
+          new StaveConnector(stave, tabStave)
+            .setType(StaveConnector.type.SINGLE_LEFT)
+            .setContext(context)
+            .draw()
+        }
+
         stave.setContext(context).draw()
+        tabStave.setContext(context).draw()
 
-        const vexFlowNotes = staveNotes.map((note) => {
-          const duration = 'q'
-          const vexFlowNote = `${note.note.toLowerCase()}/${note.octave}`
+        // 3. ПРАВИЛЬНО: отримуємо ноти для поточного такту
+        const subset = measures[m] // Просто беремо готовий такт
+        const vexNotes = []
+        const vexTabNotes = []
 
-          const staveNote = new StaveNote({
-            keys: [vexFlowNote],
-            duration: duration,
+        subset.forEach((n) => {
+          const { name, octave } = midiToNoteName(n.midi)
+          const { str, fret } = getTabPosition(n.midi)
+          const dur = getVexDuration(n.duration)
+
+          const sn = new StaveNote({
+            keys: [`${name.toLowerCase()}/${octave}`],
+            duration: dur,
             auto_stem: true,
           })
+          if (name.includes('#')) sn.addModifier(new Accidental('#'), 0)
+          vexNotes.push(sn)
 
-          if (note.note.includes('#')) {
-            staveNote.addModifier(new Accidental('#'), 0)
-          } else if (note.note.includes('b')) {
-            staveNote.addModifier(new Accidental('b'), 0)
-          }
-
-          return staveNote
+          vexTabNotes.push(new TabNote({ positions: [{ str, fret }], duration: dur }))
         })
 
-        if (vexFlowNotes.length > 0) {
-          const voice = new Voice({
-            num_beats: Math.max(vexFlowNotes.length, 4),
-            beat_value: 4,
-          })
+        if (vexNotes.length > 0) {
+          const voice = new Voice({ num_beats: numerator, beat_value: denominator }).setMode(
+            Voice.Mode.SOFT
+          )
+          const tabVoice = new Voice({ num_beats: numerator, beat_value: denominator }).setMode(
+            Voice.Mode.SOFT
+          )
+          voice.addTickables(vexNotes)
+          tabVoice.addTickables(vexTabNotes)
 
-          voice.setMode(Voice.Mode.SOFT)
-          voice.addTickables(vexFlowNotes)
+          // Додаємо Beams (з'єднання вісімок), щоб виглядало професійно
+          const beams = Beam.generateBeams(vexNotes)
 
-          new Formatter().joinVoices([voice]).format([voice], 600)
+          const startX = colIndex === 0 ? 80 : 10
+          stave.setNoteStartX(x + startX)
+          tabStave.setNoteStartX(x + startX)
+
+          new Formatter()
+            .joinVoices([voice, tabVoice])
+            .format([voice, tabVoice], measureWidth - (colIndex === 0 ? 100 : 20))
+
           voice.draw(context, stave)
+          tabVoice.draw(context, tabStave)
+
+          // Малюємо з'єднання
+          beams.forEach((b) => b.setContext(context).draw())
         }
+
+        new StaveConnector(stave, tabStave)
+          .setType(StaveConnector.type.SINGLE_RIGHT)
+          .setContext(context)
+          .draw()
       }
-    } catch (error) {
-      console.error('Помилка рендерингу нотного стану:', error)
-      scoreDivRef.current.innerHTML = `
-        <div style="color: red; text-align: center; padding: 20px;">
-          <p>Помилка при відображенні нотного стану</p>
-          <small>${error.message}</small>
-        </div>
-      `
+    } catch (e) {
+      console.error('VexFlow Error:', e)
     }
   }
 
   return (
-    <div
-      style={{
-        width: '100%',
-      }}
-    >
-      <h3>🎼 Нотний стан</h3>
-      <div ref={scoreDivRef} className="sheet-music" />
-    </div>
+    <>
+      {showNotes ? (
+        <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
+          <button onClick={() => exportToPNG(scoreDivRef, title)}>Завантажити PNG</button>
+          <button onClick={() => exportToPDF(scoreDivRef, title)}>Завантажити PDF</button>
+        </div>
+      ) : null}
+      <canvas ref={scoreDivRef} style={{ background: 'white', padding: '10px' }} />
+    </>
   )
 }
 

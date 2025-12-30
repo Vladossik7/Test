@@ -1,70 +1,42 @@
-import { getNoteName } from './general'
 import { Midi } from '@tonejs/midi'
 
 export const parseMidi = (file) => {
   try {
-    // 1. Читаємо файл як ArrayBuffer
-    // const arrayBuffer = await file.arrayBuffer()
-
-    // 2. Парсимо бінарні дані
     const midi = new Midi(file)
 
-    console.log('MIDI loaded successfully:', midi.name)
+    // 1. Отримуємо розмір такту (беремо перший знайдений або 4/4 за дефолтом)
+    const timeSignature = midi.header.timeSignatures[0]?.timeSignature
+      ? {
+          numerator: midi.header.timeSignatures[0]?.timeSignature[0],
+          denominator: midi.header.timeSignatures[0]?.timeSignature[1],
+        }
+      : { numerator: 4, denominator: [4] }
 
-    // 3. Беремо перший трек з нотами
-    const track = midi.tracks.find((t) => t.notes.length > 0)
+    console.log('MIDI loaded successfully:', midi.name, timeSignature, midi)
+    // 3. Беремо перший трек з нотами назвою, що відповідає гітарі чи ведучій партії
+    const guitarTrack = midi.tracks.find(
+      ({ name, notes }) =>
+        (name.toLowerCase().includes('guitar') || name.toLowerCase().includes('lead')) &&
+        notes.length > 0
+    )
+    const firstTrackWithNotes = midi.tracks.find(({ notes }) => notes.length > 0)
+    const track = guitarTrack || firstTrackWithNotes
+
     if (!track) {
       console.warn('No notes found in any track')
       return []
     }
 
-    return track.notes.map((note) => ({
+    const notes = track.notes.map((note) => ({
       midi: note.midi,
       time: note.time,
       duration: note.duration,
       velocity: note.velocity,
     }))
+
+    return { notes, timeSignature, midiTitle: midi.name }
   } catch (error) {
     console.error('Помилка при читанні MIDI:', error)
-    return []
+    return { notes: [], timeSignature: { numerator: 4, denominator: 4 }, midiTitle: '' }
   }
-  // // Завантажуємо MIDI файл
-  // const midi = await Midi.fromUrl(fileUrl)
-
-  // // MIDI файл може мати кілька треків
-  // midi.tracks.forEach((track) => {
-  //   // Ноти вже мають поля: name, midi, time, duration, velocity
-  //   const notes = track.notes
-
-  //   console.log('Track Name:', track.name)
-  //   console.log('Notes in this track:', notes)
-
-  //   // Тепер ви можете передати ці ноти у ваш конвертер табулатур
-  //   // (Важливо: у @tonejs/midi поле називається 'midi', а не 'number')
-  // })
-}
-
-export const simpleMidiParse = (arrayBuffer) => {
-  const parsedNotes = []
-  try {
-    const data = new Uint8Array(arrayBuffer)
-    for (let i = 0; i < data.length - 2; i++) {
-      if ((data[i] & 0xf0) === 0x90 && data[i + 2] > 0) {
-        const noteNumber = data[i + 1]
-        const noteName = getNoteName(noteNumber)
-        const octave = Math.floor(noteNumber / 12) - 1
-
-        parsedNotes.push({
-          note: noteName,
-          octave: octave,
-          number: noteNumber,
-          time: i,
-        })
-      }
-    }
-  } catch (error) {
-    console.error('Помилка простого парсингу MIDI:', error)
-  }
-
-  return parsedNotes
 }
