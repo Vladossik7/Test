@@ -17,7 +17,10 @@
     "react-dom": "^19.1.1",
     "svg2pdf.js": "^2.6.0",
     "tone": "^15.1.22",
-    "vexflow": "^5.0.0"
+    "vexflow": "^5.0.0",
+    "vextab": "^3.0.6",
+    "youtube-transcript-api": "^3.0.6",
+    "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
