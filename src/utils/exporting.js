@@ -1,6 +1,4 @@
 import { jsPDF } from 'jspdf'
-// import 'svg2pdf.js'
-// import { toCanvas } from 'html-to-image'
 
 export const exportToPNG = async (scoreDivRef) => {
   const canvas = scoreDivRef.current

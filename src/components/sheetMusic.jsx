@@ -24,7 +24,7 @@ const SheetMusic = ({ notes, timeSignature, title }) => {
   const [showNotes, setShowNotes] = useState(false)
   const scoreDivRef = useRef(null)
   const { numerator, denominator } = timeSignature
-  console.log('-=-==-=- ', title)
+
   useEffect(() => {
     if (notes && notes.length > 0) {
       renderSheetMusic(notes)
@@ -93,9 +93,8 @@ const SheetMusic = ({ notes, timeSignature, title }) => {
           const { name, octave } = midiToNoteName(n.midi)
           const { str, fret } = getTabPosition(n.midi)
           const dur = getVexDuration(n.duration)
-
           const sn = new StaveNote({
-            keys: [`${name.toLowerCase()}/${octave}`],
+            keys: [`${name?.toLowerCase()}/${octave}`],
             duration: dur,
             auto_stem: true,
           })
@@ -129,7 +128,6 @@ const SheetMusic = ({ notes, timeSignature, title }) => {
           voice.draw(context, stave)
           tabVoice.draw(context, tabStave)
 
-          // Малюємо з'єднання
           beams.forEach((b) => b.setContext(context).draw())
         }
 
