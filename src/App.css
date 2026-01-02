@@ -11,12 +11,13 @@
   margin: 0 auto;
 }
 
-.controls {
+.app-section {
   background: white;
   border-radius: 20px;
   padding: 2rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+  margin: 2rem auto;
+  width: 1200px;
 }
 
 button {
@@ -45,7 +46,7 @@ button:disabled {
   box-shadow: none;
 }
 
-.record-button.recording {
+.recording {
   background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%);
   animation: pulse 1.5s infinite;
 }
@@ -119,17 +120,6 @@ button:disabled {
   text-align: center;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .audio-results {
   background: white;
   border-radius: 20px;
@@ -179,28 +169,6 @@ button:disabled {
   }
 }
 
-.recording-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin: 2rem 0;
-}
-
-.stat-box {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 1.5rem;
-  border-radius: 15px;
-  text-align: center;
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-top: 0.5rem;
-}
-
 .analyzing-progress {
   margin: 1rem 0;
   padding: 1rem;
@@ -223,35 +191,13 @@ button:disabled {
   transition: width 0.3s ease;
 }
 
-.music-display {
-  background: white;
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-}
-
-.music-display h3 {
-  margin: 0 0 1.5rem 0;
-  color: #333;
-  font-size: 1.5rem;
-  text-align: center;
-}
-
-.sheet-music {
-  overflow-x: auto;
-  padding: 1rem;
-  background: #f9f9f9;
-  border-radius: 12px;
-  border: 2px solid #e0e7ff;
-}
-
 /* Адаптивність */
 @media (max-width: 768px) {
   .App-header {
     padding: 1rem;
   }
 
-  .controls {
+  .app-section {
     padding: 1.5rem;
   }
 
@@ -262,14 +208,8 @@ button:disabled {
 }
 
 @media (max-width: 480px) {
-  .load-button,
-  .record-button,
-  .youtube-button {
+  button {
     width: 100%;
     margin: 0.5rem 0;
-  }
-
-  .recording-stats {
-    grid-template-columns: 1fr;
   }
 }

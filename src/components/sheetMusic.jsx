@@ -143,6 +143,7 @@ const SheetMusic = ({ notes, timeSignature, title }) => {
 
   return (
     <>
+      <h2>{title}</h2>
       {showNotes ? (
         <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
           <button onClick={() => exportToPNG(scoreDivRef, title)}>Завантажити PNG</button>

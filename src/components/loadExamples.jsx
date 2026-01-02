@@ -73,9 +73,8 @@ export const LoadExamples = ({ setNotes, setTimeSignature, setTitle, handleAudio
       <div onClick={handleExpand}>
         <p>
           {isExpanded ? <>🔽 </> : <>▶️ </>}
-          Бібліотека зразків MIDI файлів ({fileList.length})
+          Бібліотека зразків MIDI файлів ({fileList.length}) | {status !== 'Готово' && status}
         </p>
-        <p>{status !== 'Готово' && status}</p>
       </div>
 
       {isExpanded && (
